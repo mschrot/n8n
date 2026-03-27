@@ -1,0 +1,133 @@
+# Erstellt von Michael Schrot
+
+# Vollständiges Tutorial auf YouTube: https://www.youtube.com/@mschrot
+
+## Systemanforderungen
+
+* Empfohlen: Windows 10 / 11, Ryzen 7, 32 GB RAM
+* VMware® Workstation 17 Pro (Hosted Hypervisor)
+* Version: 17.6.4 build-24832109
+* ISO: ubuntu-24.04.4-live-server-amd64.iso
+* VM-Konfiguration: 2x CPU, 4x Core, 8 GB RAM, 20 GB Disk
+* Netzwerk: Bridge
+
+---
+
+## 1. Ubuntu Server mit Docker + Portainer installieren
+
+https://github.com/mschrot/ubuntu_server
+
+---
+
+## 2. Stack in Portainer implementieren (n8n, Ollama, Qdrant)
+
+
+version: "3.8"
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_SECURE_COOKIE=false
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://IP:5678/
+      - GENERIC_TIMEZONE=Europe/Berlin
+    volumes:
+      - n8n_data:/home/node/.n8n
+    restart: always
+
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: always
+
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: always
+
+volumes:
+  n8n_data:
+  ollama_data:
+  qdrant_data:
+
+
+Nach dem Start:
+http://IP:5678/
+→ Konto einrichten
+
+---
+
+## 3. Verbindung zum Server herstellen
+
+Ubuntu Server per SSH öffnen, z. B. mit:
+
+* CMD / MS PowerShell
+* MobaXterm
+* PuTTY
+
+Mit deinen sudo-Zugangsdaten einloggen.
+
+---
+
+## 4. Ollama-Container betreten und Modelle installieren
+
+```bash
+docker exec -it ollama bash
+```
+
+### Modelle installieren:
+
+```bash
+ollama pull mistral
+ollama pull nomic-embed-text
+```
+
+### Kontrolle:
+
+```bash
+ollama list
+```
+
+Beispielausgabe:
+
+```
+NAME                       ID              SIZE      MODIFIED
+nomic-embed-text:latest    0a109f422b47    274 MB    24 seconds ago
+mistral:latest             6577803aa9a0    4.4 GB    21 minutes ago
+```
+
+---
+
+## 5. n8n Service öffnen
+
+http://IP:5678/
+
+### Einrichtung:
+
+* Neuer Workflow erstellen
+* Datei importieren: `n8n_rag_build.json`
+* Endpunkte setzen:
+
+  * Ollama: http://ollama:11434
+  * Qdrant: http://qdrant:6333
+
+---
+
+## Weitere Informationen
+
+Vollständiges Tutorial:
+https://www.youtube.com/@mschrot
